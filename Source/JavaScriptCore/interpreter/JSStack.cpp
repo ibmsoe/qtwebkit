@@ -37,6 +37,12 @@ namespace JSC {
 
 static size_t committedBytesCount = 0;
 
+static size_t commitSize()
+ {
+    static size_t size = std::max<size_t>(16 * 1024, pageSize());
+    return size;
+ }
+
 static Mutex& stackStatisticsMutex()
 {
     DEFINE_STATIC_LOCAL(Mutex, staticMutex, ());
@@ -49,7 +55,7 @@ JSStack::JSStack(VM& vm, size_t capacity)
 {
     ASSERT(capacity && isPageAligned(capacity));
 
-    m_reservation = PageReservation::reserve(roundUpAllocationSize(capacity * sizeof(Register), commitSize), OSAllocator::JSVMStackPages);
+    m_reservation = PageReservation::reserve(roundUpAllocationSize(capacity * sizeof(Register), commitSize()), OSAllocator::JSVMStackPages);
     m_end = static_cast<Register*>(m_reservation.base());
     m_commitEnd = static_cast<Register*>(m_reservation.base());
 
@@ -78,7 +84,7 @@ bool JSStack::growSlowCase(Register* newEnd)
     // Compute the chunk size of additional memory to commit, and see if we
     // have it is still within our budget. If not, we'll fail to grow and
     // return false.
-    long delta = roundUpAllocationSize(reinterpret_cast<char*>(newEnd) - reinterpret_cast<char*>(m_commitEnd), commitSize);
+    long delta = roundUpAllocationSize(reinterpret_cast<char*>(newEnd) - reinterpret_cast<char*>(m_commitEnd), commitSize());
     if (reinterpret_cast<char*>(m_commitEnd) + delta > reinterpret_cast<char*>(m_useableEnd))
         return false;
 
@@ -134,7 +140,7 @@ void JSStack::enableErrorStackReserve()
 
 void JSStack::disableErrorStackReserve()
 {
-    char* useableEnd = reinterpret_cast<char*>(reservationEnd()) - commitSize;
+    char* useableEnd = reinterpret_cast<char*>(reservationEnd()) - commitSize();
     m_useableEnd = reinterpret_cast_ptr<Register*>(useableEnd);
 
     // By the time we get here, we are guaranteed to be destructing the last
