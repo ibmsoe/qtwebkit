@@ -331,7 +331,6 @@ void KURL::invalidate()
 KURL::KURL(ParsedURLStringTag, const String& url)
 {
     parse(url);
-    ASSERT(url == m_string);
 }
 
 KURL::KURL(const KURL& base, const String& relative)
